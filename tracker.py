@@ -2,6 +2,7 @@
 from aiogram import types, Dispatcher, Bot
 from aiogram.filters import Command
 from aiogram.types import Message, LinkPreviewOptions
+from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 
@@ -63,111 +64,109 @@ class setState(StatesGroup):
     track_wallet = State()
     untrack_address = State()
     track_wallet_edit = State()
-     
-class Wallet(Table):   
-    @dp.message(Command('start'))
-    async def start(message: types.Message):
-        await message.answer(
-            f'Hello! This tracker for Ethereum.'
-            'if tracking wallet, send me command a /track'
-        )
-        
-    @dp.message(Command('track'))
-    async def track_wallet(message: types.Message, state: FSMContext):
-        await message.reply('Send your wallet address!')
-        await state.set_state(setState.track_wallet)
-        
-    @dp.message(Command('untrack'))
-    async def untrack_wallet(message: types.Message, state: FSMContext):
-        await message.reply('Which address untrack for you?')
-        await state.set_state(setState.untrack_address)
+
+@dp.message(Command('start'))
+async def start(message: types.Message):
+    await message.answer(
+        f'Hello! This tracker for Ethereum.\n'
+        f'If tracking wallet, send me command a /track.\n', reply_markup=button1
+    )
     
-    async def track_scanner(self, address, user_id):
-        hash_set = set()
-        while True: 
-            try:  
-                block = await w3.eth.get_block('latest', full_transactions=True)
-                transactions = block['transactions']
-                
-                for txn in transactions:
-                    hash_id = txn.get('hash').hex()
-                    sender = txn.get('from')
-                    recipient = txn.get('to')                
-                                
-                    if sender == address or recipient == address:
-                        trackable = address
-                        
-                        if hash_id in hash_set:
-                            continue
-                        
-                        else:
-                            url = (f"https://sepolia.etherscan.io/tx/0x{hash_id}")
-                            replies = (f'🚨 Found transaction! 🚨\n\n'
-                                f'👤 Account : {trackable}\n\n'
-                                f'🔗 URL: {url}'
-                                )
-                            await bot.send_message(chat_id=user_id, text=replies, link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode='html')
-                            hash_set.add(hash_id)
+@dp.message(Command('track'))
+async def track_wallet(message: types.Message, state: FSMContext):
+    await message.reply('Send your wallet address!')
+    await state.set_state(setState.track_wallet)
+    
+@dp.message(Command('untrack'))
+async def untrack_wallet(message: types.Message, state: FSMContext):
+    await message.reply('Which address untrack for you?')
+    await state.set_state(setState.untrack_address)
+
+async def track_scanner(self, address, user_id):
+    hash_set = set()
+    while True: 
+        try:  
+            block = await w3.eth.get_block('latest', full_transactions=True)
+            transactions = block['transactions']
+            
+            for txn in transactions:
+                hash_id = txn.get('hash').hex()
+                sender = txn.get('from')
+                recipient = txn.get('to')                
                             
-            except TransactionNotFound as e:
-                log(f'{e}')
-                                
-            log(f'search transactions...')
-            await asyncio.sleep(3)
-            
-            
-    @dp.message(setState.track_wallet)
-    async def track_wallet_edit(message: Message, state: FSMContext):
+                if sender == address or recipient == address:
+                    trackable = address
+                    
+                    if hash_id in hash_set:
+                        continue
+                    
+                    else:
+                        url = (f"https://sepolia.etherscan.io/tx/0x{hash_id}")
+                        replies = (f'🚨 Found transaction! 🚨\n\n'
+                            f'👤 Account : {trackable}\n\n'
+                            f'🔗 URL: {url}'
+                            )
+                        await bot.send_message(chat_id=user_id, text=replies, link_preview_options=LinkPreviewOptions(is_disabled=True), parse_mode='html')
+                        hash_set.add(hash_id)
+                        
+        except TransactionNotFound as e:
+            log(f'{e}')
+                            
+        log(f'search transactions...')
+        await asyncio.sleep(3)
         
-        address = message.text
-        user_id = message.from_user.id
-        added = await message.answer('Added address...')
-        user_list = await tab.require_user(address, user_id)
         
-        if not address.startswith('0x'):
-                await message.reply('Only 0x-format address tracking!')
-                return
-            
-        else:
-            pass
-        
-        if user_list is None:
-            await asyncio.sleep(1)
-            await tab.add(address, user_id)
-            await message.answer('Your address successfully added!')
-            await message.answer('Search transactions...')
-            
-        else:
-            await message.answer('This address already tracking!')
-        
-        asyncio.create_task(wal.track_scanner(address, user_id))
-        await bot.delete_message(chat_id=message.chat.id, message_id=added.message_id)
-        await asyncio.sleep(5)
-        await tab.connect.close()
-        await state.set_state(setState.track_wallet_edit)
-        
-    @dp.message(setState.untrack_address)
-    async def untrack_wallet_edit(message: Message, state: FSMContext):
-        
-        address = message.text
-        user_id = message.from_user.id
-        wait = await message.answer('Untrack address...')
-        user_list = await tab.require_user(address, user_id)
-            
-        if user_list is None:
-            await message.reply('Your address not found to list, add his!')
+@dp.message(setState.track_wallet)
+async def track_wallet_edit(message: Message, state: FSMContext):
+    
+    address = message.text
+    user_id = message.from_user.id
+    added = await message.answer('Added address...')
+    user_list = await tab.require_user(address, user_id)
+    
+    if not address.startswith('0x'):
+            await message.reply('Only 0x-format address tracking!')
             return
-                
-        else:
-            await asyncio.sleep(1)
-            await tab.delete(address, user_id)
-            await message.answer('Your address successfully untracking!')
         
-        await bot.delete_message(chat_id=message.chat.id, message_id=wait.message_id)
-        await tab.connect.close()
+    else:
+        pass
+    
+    if user_list is None:
+        await asyncio.sleep(1)
+        await tab.add(address, user_id)
+        await message.answer('Your address successfully added!')
+        await message.answer('Search transactions...')
+        
+    else:
+        await message.answer('This address already tracking!')
+    
+    asyncio.create_task(track_scanner(address, user_id))
+    await bot.delete_message(chat_id=message.chat.id, message_id=added.message_id)
+    await asyncio.sleep(5)
+    await tab.connect.close()
+    await state.set_state(setState.track_wallet_edit)
+    
+@dp.message(setState.untrack_address)
+async def untrack_wallet_edit(message: Message, state: FSMContext):
+    
+    address = message.text
+    user_id = message.from_user.id
+    wait = await message.answer('Untrack address...')
+    user_list = await tab.require_user(address, user_id)
+        
+    if user_list is None:
+        await message.reply('Your address not found to list, add his!')
+        return
+            
+    else:
+        await asyncio.sleep(1)
+        await tab.delete(address, user_id)
+        await message.answer('Your address successfully untracking!')
+    
+    await bot.delete_message(chat_id=message.chat.id, message_id=wait.message_id)
+    await tab.connect.close()
              
 tab = Table()
-wal = Wallet()
 
 async def main():
     await dp.start_polling(bot)
