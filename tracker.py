@@ -2,9 +2,10 @@
 from aiogram import types, Dispatcher, Bot
 from aiogram.filters import Command
 from aiogram.types import Message, LinkPreviewOptions
-from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
+from aiogram import F
 
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.exceptions import TransactionNotFound
@@ -22,6 +23,7 @@ token_bot = ''
 dp = Dispatcher()
 bot = Bot(token=token_bot)
 w3 = AsyncWeb3(AsyncHTTPProvider(api))
+buttons = InlineKeyboardMarkup(inline_keyboard=[])
 
 
 class Table():
@@ -48,7 +50,7 @@ class Table():
             await self.connect.commit()
             
         async def delete(self, address, user_id):
-            await self.cursor.execute('delete from addresses where address = ? and user = ?', (address, user_id,))
+            await self.cursor.execute('delete from addresses where address = ? and user = ?', (address, user_id))
             await self.connect.commit()
             
         async def require_user(self, address, user_id):
@@ -65,24 +67,29 @@ class setState(StatesGroup):
     untrack_address = State()
     track_wallet_edit = State()
 
+inline_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text='Track', callback_data='/track'), 
+         InlineKeyboardButton(text='Untrack', callback_data='/untrack')]], input_field_placeholder='Use the menu a below...')
+
+
 @dp.message(Command('start'))
 async def start(message: types.Message):
     await message.answer(
         f'Hello! This tracker for Ethereum.\n'
-        f'If tracking wallet, send me command a /track.\n', reply_markup=button1
+        f'If tracking wallet, use a button under.\n', reply_markup=inline_keyboard
     )
-    
-@dp.message(Command('track'))
-async def track_wallet(message: types.Message, state: FSMContext):
-    await message.reply('Send your wallet address!')
+        
+@dp.callback_query(F.data == '/track')
+async def track_wallet(callback: CallbackQuery, state: FSMContext):
+    await callback.message.reply('Send your wallet address!', reply_markup=inline_keyboard)
     await state.set_state(setState.track_wallet)
     
-@dp.message(Command('untrack'))
-async def untrack_wallet(message: types.Message, state: FSMContext):
-    await message.reply('Which address untrack for you?')
+@dp.callback_query(F.data == '/untrack')
+async def untrack_wallet(callback: CallbackQuery, state: FSMContext):
+    await callback.message.reply('Which address untrack for you?', reply_markup=inline_keyboard)
     await state.set_state(setState.untrack_address)
 
-async def track_scanner(self, address, user_id):
+async def track_scanner(address, user_id):
     hash_set = set()
     while True: 
         try:  
@@ -110,11 +117,18 @@ async def track_scanner(self, address, user_id):
                         hash_set.add(hash_id)
                         
         except TransactionNotFound as e:
-            log(f'{e}')
+            log(f'пидор {e}')
                             
         log(f'search transactions...')
         await asyncio.sleep(3)
-        
+
+@dp.callback_query()
+async def button_handler(callback: CallbackQuery, state: FSMContext):
+    if callback.data == 'Track':
+        await track_wallet_edit(callback, state)
+    
+    elif callback.data == 'Untrack':
+        await untrack_wallet_edit(callback, state)
         
 @dp.message(setState.track_wallet)
 async def track_wallet_edit(message: Message, state: FSMContext):
@@ -169,6 +183,7 @@ async def untrack_wallet_edit(message: Message, state: FSMContext):
 tab = Table()
 
 async def main():
+    await tab.create()
     await dp.start_polling(bot)
   
 if __name__ == "__main__":
