@@ -117,7 +117,7 @@ async def track_scanner(address, user_id):
                         hash_set.add(hash_id)
                         
         except TransactionNotFound as e:
-            log(f'пидор {e}')
+            log(f'{e}')
                             
         log(f'search transactions...')
         await asyncio.sleep(3)
