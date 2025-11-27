@@ -111,7 +111,8 @@ async def get_wallets(callback: CallbackQuery):
         
 async def track_scanner(address, user_id):
     log(f'search transactions...')
-    hash_set = set()
+    hash_set = ()
+    
     while True: 
         try:  
             block = await w3.eth.get_block('latest', full_transactions=True)
