@@ -106,12 +106,10 @@ async def get_wallets(callback: CallbackQuery):
     else: 
         await callback.message.reply('Your dont have address!')
 
-
     
-        
 async def track_scanner(address, user_id):
     log(f'search transactions...')
-    hash_set = ()
+    hash_set = []
     
     while True: 
         try:  
