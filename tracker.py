@@ -5,7 +5,6 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQu
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram import F
-
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.exceptions import TransactionNotFound
 
@@ -33,7 +32,6 @@ class Table():
         self.user_id = user_id
         self.block = block
 
-             
     try:
         async def tools(self):
             self.connect = await aiosqlite.connect('addresses.db')
@@ -71,7 +69,6 @@ inline_keyboard = InlineKeyboardMarkup(inline_keyboard=[
          InlineKeyboardButton(text='❌ Untrack', callback_data='/untrack'),
          InlineKeyboardButton(text='📒 Wallets', callback_data='/my_wallets')]], input_field_placeholder='Use the menu a below...')
 
-
 @dp.message(Command('start'))
 async def start(message: types.Message):
     await message.answer(
@@ -95,7 +92,7 @@ async def get_wallets(callback: CallbackQuery):
     await tab.cursor.execute('select * from addresses where user = ?', (user_id, ))
     memory = await tab.cursor.fetchall()
     
-    data_addresses = ''
+    data_addresses = []
     
     if memory: 
         for address in memory:
@@ -138,7 +135,6 @@ async def track_scanner(address, user_id):
                         
         except TransactionNotFound as e:
             log(f'{e}')
-                            
         await asyncio.sleep(3)
 
 @dp.callback_query()
@@ -146,7 +142,7 @@ async def button_handler(callback: CallbackQuery, state: FSMContext):
     if callback.data == 'Track':
         await track_wallet_edit(callback, state)
     
-    elif callback.data == 'Untrack':
+    if callback.data == 'Untrack':
         await untrack_wallet_edit(callback, state)
         
 @dp.message(setState.track_wallet)
@@ -160,13 +156,11 @@ async def track_wallet_edit(message: Message, state: FSMContext):
     if not address.startswith('0x'):
             await message.reply('Only 0x-format address tracking!')
             return
-        
     else:
         pass
     
     if require > 0:
         await message.answer('This address already tracking!')
-        
     else:
         await asyncio.sleep(1)
         await tab.add(address, user_id)
@@ -192,7 +186,6 @@ async def untrack_wallet_edit(message: Message, state: FSMContext):
         await asyncio.sleep(1)
         await tab.delete(address, user_id)
         await message.answer('Your address successfully untracking!')
-    
         await bot.delete_message(chat_id=message.chat.id, message_id=deleted.message_id)
         await tab.connect.commit()
         
