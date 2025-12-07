@@ -156,9 +156,7 @@ async def track_wallet_edit(message: Message, state: FSMContext):
     if not address.startswith('0x'):
             await message.reply('Only 0x-format address tracking!')
             return
-    else:
-        pass
-    
+
     if require > 0:
         await message.answer('This address already tracking!')
     else:
