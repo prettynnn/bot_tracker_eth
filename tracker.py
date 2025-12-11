@@ -15,8 +15,8 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.info
 
 
-api = ''
-token_bot = ''
+api = 'api'
+token_bot = 'token_you_bot'
 
 dp = Dispatcher()
 bot = Bot(token=token_bot)
